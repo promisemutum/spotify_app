@@ -4,6 +4,8 @@ import os
 import base64
 from requests import post, get
 import json
+import subprocess
+import speech_recognition
 
 def build_gui():
     width_height = "800x500"
@@ -23,11 +25,26 @@ def build_gui():
     button1 = customtkinter.CTkButton(master=frame, text="Enter", command=button_click)
     button1.pack(pady=10, padx=10)
 
+    button2 = customtkinter.CTkButton(master=frame, text="Voice Search", command=button_click)
+    button2.pack(pady=10, padx=10)
+
     return root
+
+def start_app(command):
+    try:
+        if os.name == 'nt':  # For Windows
+            os.system("spotify")
+        elif os.name == 'posix':  # For Unix/Linux/MacOS
+            subprocess.run(['echo', '-e', f'{command}\n'], check=True, shell=True)
+        else:
+            print("Unsupported OS")
+    except subprocess.CalledProcessError as e:
+        print(f"Error executing command: {e}")
 
 def button_click():
     song_name = entry.get()
     search_func(song_name)
+
 
 def get_token():
     global token
@@ -58,11 +75,15 @@ def search_func(song_name):
     if len(json_result)==0:
         print("No songs found")
         return None
-    return json_result
+    spotify_song_uri = json_result["uri"]
+    os.system(f"start {spotify_song_uri} /silent")
+
+def voice_search():
+    recognizer = speech_recognition.Recognizer()
 
 def main():
-    root = build_gui()
     get_token()
+    root = build_gui()
     root.mainloop()
 
 if __name__ == "__main__":
