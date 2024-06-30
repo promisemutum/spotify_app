@@ -5,13 +5,17 @@ import base64
 import json
 from requests import post, get
 import speech_recognition
+from PIL import Image, ImageTk
+import requests
+import urllib.request
 
 class spotify_api:
     def __init__(self):
         self.token = None
-    
+    #Get token from spotify
     def get_token(self):
         load_dotenv()
+        #client details
         client_id = os.getenv("SPOTIFY_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
 
@@ -40,25 +44,29 @@ class spotify_api:
         query_url = search_url + query
         result = get(query_url, headers=headers)
         json_result = json.loads(result.content)["tracks"]["items"]
+        print(json_result)
 
         if not json_result:
             print("No songs found")
             return None
 
         spotify_song_uri = json_result[0]["uri"]
+        self.image_link = json_result[0]["images"]["url"]
         return spotify_song_uri
 
 class search_app:
     def __init__(self):
-
+        # root
         self.root = customtkinter.CTk()
         self.root.geometry("800x500")
-
+        # frame
         frame = customtkinter.CTkFrame(master=self.root)
         frame.pack(expand=True, fill="both", anchor="center")
-
-        label = customtkinter.CTkLabel(master=frame, text="Spotify Search App")
-        label.pack(pady=10, padx=10)
+        #title
+        label_title = customtkinter.CTkLabel(master=frame, text="Spotify Search App")
+        label_title.pack(pady=10, padx=10)
+        #album cover
+        label_album_cover = customtkinter.CTkImage(image=self.display_photo)
 
         self.entry = customtkinter.CTkEntry(master=frame, placeholder_text="Enter a song")
         self.entry.pack(pady=10, padx=10)
@@ -94,8 +102,14 @@ class search_app:
         spotify_uri = self.spotify_api.search_track(song_name)
         if spotify_uri:
             os.system(f"start {spotify_uri} /silent")
+    #working
+    def fetch_image_from_url(self):
+        album_image = requests.get(self.spotify_api.image_link)
+    def display_photo(self):
+        return None
 
     def main(self):
+        #main function
         self.spotify_api.get_token()
         self.root.mainloop()
 
