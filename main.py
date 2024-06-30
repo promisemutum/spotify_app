@@ -79,12 +79,11 @@ class search_app:
     def voice_search(self):
         try:
             with speech_recognition.Microphone() as mic:
-                print("Say something...")
-                self.recognizer.adjust_for_ambient_noise(mic, duration=0.5)
+                self.recognizer.adjust_for_ambient_noise(mic, duration=0.2)
                 audio = self.recognizer.listen(mic)
 
                 text = self.recognizer.recognize_google(audio)
-                print(f"You said: {text}")
+                self.play_track(text)
 
         except speech_recognition.UnknownValueError:
             print("Google Speech Recognition could not understand audio.")
