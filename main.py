@@ -1,27 +1,25 @@
-import customtkinter
 import os
 from dotenv import load_dotenv
 import base64
 import json
 from requests import post, get
 import speech_recognition
-from PIL import Image, ImageTk
-import requests
 import urllib.request
+from PIL import Image
+import io
+import customtkinter
 
 class spotify_api:
     def __init__(self):
         self.token = None
-    #Get token from spotify
+
     def get_token(self):
         load_dotenv()
-        #client details
         client_id = os.getenv("SPOTIFY_CLIENT_ID")
         client_secret = os.getenv("SPOTIFY_CLIENT_SECRET")
-
-        auth_string = client_id +":"+client_secret
+        auth_string = f"{client_id}:{client_secret}"
         auth_bytes = auth_string.encode("utf-8")
-        auth_base64 = str(base64.b64encode(auth_bytes), "utf-8")
+        auth_base64 = base64.b64encode(auth_bytes).decode("utf-8")
         token_url = os.getenv("TOKEN_URL")
         headers = {
             "Authorization": "Basic " + auth_base64,
@@ -29,7 +27,7 @@ class spotify_api:
         }
         data = {"grant_type": "client_credentials"}
         result = post(token_url, headers=headers, data=data)
-        json_result = json.loads(result.content)
+        json_result = result.json()
         self.token = json_result["access_token"]
         return self.token
 
@@ -37,36 +35,32 @@ class spotify_api:
         if not self.token:
             print("Token not available. Please fetch token first.")
             return None
-        
         search_url = os.getenv("SEARCH_URL")
-        headers = {"Authorization": "Bearer "+self.token}
+        headers = {"Authorization": "Bearer " + self.token}
         query = f"?q={song_name}&type=track&limit=1"
         query_url = search_url + query
         result = get(query_url, headers=headers)
-        json_result = json.loads(result.content)["tracks"]["items"]
-        print(json_result)
+        json_result = result.json()["tracks"]["items"]
 
         if not json_result:
             print("No songs found")
             return None
 
-        spotify_song_uri = json_result[0]["uri"]
-        self.image_link = json_result[0]["images"]["url"]
-        return spotify_song_uri
+        spotify_song_uri = json_result[0]["uri"]  # Song uri
+        image_link = json_result[0]["album"]["images"][0]["url"]  # Image uri
+
+        return spotify_song_uri, image_link
 
 class search_app:
     def __init__(self):
-        # root
         self.root = customtkinter.CTk()
         self.root.geometry("800x500")
-        # frame
+        
         frame = customtkinter.CTkFrame(master=self.root)
         frame.pack(expand=True, fill="both", anchor="center")
-        #title
+        
         label_title = customtkinter.CTkLabel(master=frame, text="Spotify Search App")
         label_title.pack(pady=10, padx=10)
-        #album cover
-        label_album_cover = customtkinter.CTkImage(image=self.display_photo)
 
         self.entry = customtkinter.CTkEntry(master=frame, placeholder_text="Enter a song")
         self.entry.pack(pady=10, padx=10)
@@ -79,6 +73,17 @@ class search_app:
 
         self.spotify_api = spotify_api()
         self.recognizer = speech_recognition.Recognizer()
+
+    def link_to_image(self, image_link):
+        try:
+            with urllib.request.urlopen(image_link) as response:
+                raw_data = response.read()
+            image = Image.open(io.BytesIO(raw_data))
+            processed_image = customtkinter.CTkImage(image)
+            return processed_image
+        except urllib.error.URLError as e:
+            print(f"Error fetching image: {e}")
+            return None
 
     def button_click(self):
         song_name = self.entry.get()
@@ -98,18 +103,18 @@ class search_app:
         except speech_recognition.RequestError as e:
             print(f"Could not request results from Google Speech Recognition service; {e}")
 
-    def play_track(self,song_name):
-        spotify_uri = self.spotify_api.search_track(song_name)
+    def play_track(self, song_name):
+        spotify_uri, image_link = self.spotify_api.search_track(song_name)
         if spotify_uri:
-            os.system(f"start {spotify_uri} /silent")
-    #working
-    def fetch_image_from_url(self):
-        album_image = requests.get(self.spotify_api.image_link)
-    def display_photo(self):
-        return None
+            os.system(f"start {spotify_uri}")  # Open the Spotify URI
+            image = self.link_to_image(image_link)
+            if image:
+                # working
+                label_image = customtkinter.CTkLabel(master=self.root, image=image)
+                label_image.config(width=400, height=400)
+                label_image.pack(x=100, y=150)
 
     def main(self):
-        #main function
         self.spotify_api.get_token()
         self.root.mainloop()
 
