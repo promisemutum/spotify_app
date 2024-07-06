@@ -111,8 +111,8 @@ class search_app:
             if image:
                 # working
                 label_image = customtkinter.CTkLabel(master=self.root, image=image)
-                label_image.config(width=400, height=400)
-                label_image.pack(x=100, y=150)
+                label_image.configure(width=640, height=640)
+                label_image.pack()
 
     def main(self):
         self.spotify_api.get_token()
